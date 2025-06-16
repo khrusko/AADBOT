@@ -1,42 +1,173 @@
-using AADBOT_KarloHruskovec.Data;
+﻿using AADBOT_KarloHruskovec.Data;
+using AADBOT_KarloHruskovec.Models;
+using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+	options.UseSqlServer(connectionString, sqlOptions =>
+		sqlOptions.EnableRetryOnFailure()));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddControllersWithViews();
+builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+{
+	options.SignIn.RequireConfirmedAccount = false;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddAuthentication()
+	.AddGoogle(options =>
+	{
+		options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+		options.Events.OnCreatingTicket = async ctx =>
+		{
+			var userManager = ctx.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+			var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+
+			var email = ctx.Principal.FindFirstValue(ClaimTypes.Email);
+			var user = await userManager.FindByEmailAsync(email);
+			if (user == null)
+			{
+				user = new ApplicationUser
+				{
+					UserName = email,
+					Email = email,
+					EmailConfirmed = true,
+					Package = "FREE",
+					LastPackageChange = DateTime.UtcNow
+				};
+				await userManager.CreateAsync(user);
+				await userManager.AddToRoleAsync(user, "RegisteredUser");
+
+				db.Logs.Add(new LogEntry
+				{
+					UserId = user.Id,
+					Action = "Registered via Google",
+					Timestamp = DateTime.UtcNow
+				});
+				await db.SaveChangesAsync();
+			}
+		};
+	})
+	.AddGitHub(options =>
+	{
+		options.ClientId = builder.Configuration["Authentication:GitHub:ClientId"];
+		options.ClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"];
+		options.Scope.Add("user:email");
+		options.Events.OnCreatingTicket = async ctx =>
+		{
+			var userManager = ctx.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+			var db = ctx.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+
+			var email = ctx.Principal.FindFirstValue(ClaimTypes.Email);
+			var user = await userManager.FindByEmailAsync(email);
+			if (user == null)
+			{
+				user = new ApplicationUser
+				{
+					UserName = email,
+					Email = email,
+					EmailConfirmed = true,
+					Package = "FREE",
+					LastPackageChange = DateTime.UtcNow
+				};
+				await userManager.CreateAsync(user);
+				await userManager.AddToRoleAsync(user, "RegisteredUser");
+
+				db.Logs.Add(new LogEntry
+				{
+					UserId = user.Id,
+					Action = "Registered via GitHub",
+					Timestamp = DateTime.UtcNow
+				});
+				await db.SaveChangesAsync();
+			}
+		};
+	});
+
+builder.Services.AddLogging();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IPackageService, PackageService>();
+
+builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+	options.AddPolicy("AllowReactDev", policy =>
+	{
+		policy.WithOrigins("http://localhost:3000")
+			  .AllowAnyHeader()
+			  .AllowAnyMethod()
+			  .AllowCredentials();
+	});
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+	var services = scope.ServiceProvider;
+	var db = services.GetRequiredService<ApplicationDbContext>();
+	await db.Database.MigrateAsync();
+
+	var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+	var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+
+	string[] roles = new[] { "Admin", "RegisteredUser" };
+
+	foreach (var role in roles)
+	{
+		if (!await roleManager.RoleExistsAsync(role))
+			await roleManager.CreateAsync(new IdentityRole(role));
+	}
+
+	var adminEmail = "admin@site.com";
+	var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+	if (adminUser == null)
+	{
+		adminUser = new ApplicationUser
+		{
+			UserName = adminEmail,
+			Email = adminEmail,
+			EmailConfirmed = true,
+			Package = "GOLD"
+		};
+		await userManager.CreateAsync(adminUser, "Admin123!");
+		await userManager.AddToRoleAsync(adminUser, "Admin");
+	}
+}
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseMigrationsEndPoint();
+	app.UseDeveloperExceptionPage();
 }
 else
 {
-    app.UseExceptionHandler("/Home/Error");
+	app.UseExceptionHandler("/Error");
+	app.UseHsts();
 }
-app.UseRouting();
 
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+app.UseCors("AllowReactDev");
+app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
-app.MapRazorPages()
-   .WithStaticAssets();
+app.MapControllers();
 
 app.Run();

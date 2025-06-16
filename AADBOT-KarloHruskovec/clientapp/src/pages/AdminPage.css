@@ -1,0 +1,53 @@
+.admin-container {
+  max-width: 900px;
+  margin: auto;
+  padding: 2rem;
+  font-family: sans-serif;
+}
+
+.admin-section {
+  margin-top: 2rem;
+}
+
+.admin-card {
+  background-color: #f4f4f4;
+  border: 1px solid #ddd;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+}
+
+.admin-card button {
+  margin-top: 0.5rem;
+  background-color: crimson;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.admin-card select {
+  margin-top: 0.5rem;
+  padding: 4px;
+}
+
+.status-msg {
+  color: green;
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.log-list {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: scroll;
+  font-size: 0.9em;
+}
+
+.log-entry {
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 0;
+}

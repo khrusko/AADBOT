@@ -4,9 +4,10 @@ namespace AADBOT_KarloHruskovec.Models
 {
 	public class ApplicationUser : IdentityUser
 	{
-		public string Package { get; set; } = "FREE"; // FREE, PRO, GOLD
+		public string Package { get; set; } = "FREE";
 		public DateTime? LastPackageChange { get; set; }
-		public long DailyUploadSize { get; set; } = 0; // in bytes
+		public long DailyUploadSize { get; set; } = 0;
 		public DateTime? LastUploadReset { get; set; }
 	}
+
 }

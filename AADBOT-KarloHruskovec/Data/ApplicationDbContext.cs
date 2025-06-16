@@ -13,5 +13,6 @@ namespace AADBOT_KarloHruskovec.Data
 
 		public DbSet<Photo> Photos { get; set; }
 		public DbSet<LogEntry> Logs { get; set; }
+
 	}
 }

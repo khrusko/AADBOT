@@ -1,0 +1,55 @@
+.package-container {
+  max-width: 500px;
+  margin: auto;
+  padding: 2rem;
+  background-color: #fdfdfd;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.05);
+  font-family: sans-serif;
+}
+
+.package-status {
+  margin-bottom: 2rem;
+  background-color: #fafafa;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.package-change {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.package-change label {
+  font-weight: bold;
+}
+
+.package-change select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #aaa;
+}
+
+.package-change button {
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.package-change button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  margin-top: 1rem;
+  color: green;
+  font-weight: bold;
+}

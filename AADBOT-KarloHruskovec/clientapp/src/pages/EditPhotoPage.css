@@ -1,0 +1,47 @@
+.edit-photo-container {
+  max-width: 500px;
+  margin: auto;
+  padding: 2rem;
+  background-color: #fdfdfd;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.05);
+}
+
+.edit-photo-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-photo-form label {
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.edit-photo-form input {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
+}
+
+.primary-btn {
+  margin-top: 1.5rem;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background-color: #0056b3;
+}
+
+.status-msg {
+  color: green;
+  font-weight: bold;
+  margin-top: 1rem;
+}

@@ -33,7 +33,7 @@ function PhotoUploadPage() {
       });
 
       if (response.ok) {
-        setMessage("✅ Photo uploaded successfully.");
+        setMessage("Photo uploaded successfully.");
         setFile(null);
         setDescription("");
         setHashtags("");

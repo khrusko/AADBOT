@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import api from "../config/api";
-import "./LoginPage.css"; // optional if you split styles
+import "./LoginPage.css";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,6 +10,7 @@ function LoginPage() {
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  const { setUser } = useContext(AuthContext);
 
   const validate = () => {
     const errs = {};
@@ -34,10 +36,16 @@ function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       if (res.ok) {
+        const result = await res.json();
+        const userData = {
+          email: result.email,
+          isAdmin: result.isAdmin,
+        };
+        setUser(userData);
         setMessage("Login successful.");
         setTimeout(() => navigate("/"), 1000);
       } else {
@@ -72,7 +80,9 @@ function LoginPage() {
         />
         {errors.password && <span className="error">{errors.password}</span>}
 
-        <button type="submit" className="primary-btn">Login</button>
+        <button type="submit" className="primary-btn">
+          Login
+        </button>
       </form>
 
       {message && <p className="status-msg">{message}</p>}

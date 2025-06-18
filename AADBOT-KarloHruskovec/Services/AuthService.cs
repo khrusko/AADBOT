@@ -49,15 +49,15 @@ namespace AADBOT_KarloHruskovec.Services
 			return (true, Array.Empty<string>());
 		}
 
-		public async Task<(bool Success, string[] Errors)> LoginAsync(LoginRequest model)
+		public async Task<(bool Success, string[] Errors, bool IsAdmin)> LoginAsync(LoginRequest model)
 		{
 			var user = await _userManager.FindByEmailAsync(model.Email);
 			if (user == null)
-				return (false, new[] { "Invalid credentials." });
+				return (false, new[] { "Invalid credentials." }, false);
 
 			var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: false);
 			if (!result.Succeeded)
-				return (false, new[] { "Invalid credentials." });
+				return (false, new[] { "Invalid credentials." }, false);
 
 			_context.Logs.Add(new LogEntry
 			{
@@ -67,15 +67,35 @@ namespace AADBOT_KarloHruskovec.Services
 			});
 
 			await _context.SaveChangesAsync();
-			return (true, Array.Empty<string>());
+
+			var roles = await _userManager.GetRolesAsync(user);
+			bool isAdmin = roles.Contains("Admin");
+
+			return (true, Array.Empty<string>(), isAdmin);
 		}
+
 
 		public async Task LogoutAsync()
 		{
 			var httpContext = _httpContextAccessor.HttpContext;
-			if (httpContext != null)
-				await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+			if (httpContext != null && httpContext.User.Identity?.IsAuthenticated == true)
+			{
+				var userId = _userManager.GetUserId(httpContext.User);
+
+				_context.Logs.Add(new LogEntry
+				{
+					UserId = userId,
+					Action = "User logged out",
+					Timestamp = DateTime.UtcNow
+				});
+
+				await _context.SaveChangesAsync();
+			}
+
+			await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
 		}
+
 
 	}
 }

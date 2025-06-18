@@ -1,6 +1,7 @@
 ﻿using AADBOT_KarloHruskovec.Data;
 using AADBOT_KarloHruskovec.DTOs;
 using AADBOT_KarloHruskovec.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace AADBOT_KarloHruskovec.Services
@@ -10,14 +11,27 @@ namespace AADBOT_KarloHruskovec.Services
 		private readonly ApplicationDbContext _context;
 		private readonly IImageService _imageService;
 
-		public PhotoService(ApplicationDbContext context, IImageService imageService)
+		private readonly IHttpContextAccessor _httpContextAccessor;
+		private readonly UserManager<ApplicationUser> _userManager;
+
+		public PhotoService(
+			ApplicationDbContext context,
+			IImageService imageService,
+			IHttpContextAccessor httpContextAccessor,
+			UserManager<ApplicationUser> userManager)
 		{
 			_context = context;
 			_imageService = imageService;
+			_httpContextAccessor = httpContextAccessor;
+			_userManager = userManager;
+
 		}
+
 
 		public async Task<bool> UploadPhotoAsync(ApplicationUser user, IFormFile file, string description, string hashtags, string format, int? resize)
 		{
+			var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+
 			var (bytes, newFileName, fmt) = await _imageService.ProcessImageAsync(file, format, resize);
 			var path = Path.Combine("wwwroot/images", newFileName);
 			await File.WriteAllBytesAsync(path, bytes);
@@ -33,9 +47,11 @@ namespace AADBOT_KarloHruskovec.Services
 				UserId = user.Id
 			};
 
-			user.DailyUploadSize += bytes.Length;
+			if (!isAdmin)
+				user.DailyUploadSize += bytes.Length;
 
 			_context.Photos.Add(photo);
+
 			_context.Logs.Add(new LogEntry
 			{
 				UserId = user.Id,
@@ -47,12 +63,13 @@ namespace AADBOT_KarloHruskovec.Services
 			return true;
 		}
 
+
 		public async Task<List<object>> GetLatestPhotosAsync()
 		{
 			return await _context.Photos
 				.Include(p => p.User)
 				.OrderByDescending(p => p.UploadDate)
-				.Take(10)
+				//.Take(10)
 				.Select(p => new
 				{
 					p.Id,
@@ -78,7 +95,12 @@ namespace AADBOT_KarloHruskovec.Services
 		public async Task<bool> UpdatePhotoAsync(ApplicationUser user, int id, string description, string hashtags)
 		{
 			var photo = await _context.Photos.FindAsync(id);
-			if (photo == null || photo.UserId != user.Id) return false;
+			if (photo == null)
+				return false;
+
+			var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+			if (photo.UserId != user.Id && !isAdmin)
+				return false;
 
 			photo.Description = description;
 			photo.Hashtags = hashtags;
@@ -124,8 +146,28 @@ namespace AADBOT_KarloHruskovec.Services
 			if (!File.Exists(path)) return null;
 
 			var originalBytes = await File.ReadAllBytesAsync(path);
-			return await _imageService.ApplyFiltersAsync(originalBytes, filters);
+			var processed = await _imageService.ApplyFiltersAsync(originalBytes, filters);
+			string? userId = null;
+			var httpContext = _httpContextAccessor.HttpContext;
+
+			if (httpContext?.User.Identity?.IsAuthenticated == true)
+			{
+				userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+			}
+
+			_context.Logs.Add(new LogEntry
+			{
+				UserId = userId,
+				Action = $"Downloaded photo ID:{photo.Id}",
+				Timestamp = DateTime.UtcNow
+			});
+
+			await _context.SaveChangesAsync();
+
+			return processed;
 		}
+
+
 
 	}
 }

@@ -32,12 +32,18 @@ namespace AADBOT_KarloHruskovec.Controllers
 		[HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginRequest model)
 		{
-			var (success, errors) = await _authService.LoginAsync(model);
+			var (success, errors, isAdmin) = await _authService.LoginAsync(model);
 			if (!success)
 				return Unauthorized(new { Message = errors.FirstOrDefault() ?? "Login failed." });
 
-			return Ok(new { Message = "Login successful." });
+			return Ok(new
+			{
+				Message = "Login successful.",
+				Email = model.Email,
+				IsAdmin = isAdmin
+			});
 		}
+
 
 		[Authorize]
 		[HttpPost("logout")]
@@ -46,5 +52,20 @@ namespace AADBOT_KarloHruskovec.Controllers
 			await _authService.LogoutAsync();
 			return Ok(new { Message = "Logout successful." });
 		}
+
+		[HttpGet("me")]
+		public IActionResult Me()
+		{
+			if (!User.Identity.IsAuthenticated)
+				return Ok(new { Email = (string?)null, IsAdmin = false });
+
+			return Ok(new
+			{
+				Email = User.Identity.Name,
+				IsAdmin = User.IsInRole("Admin")
+			});
+		}
+
+
 	}
 }

@@ -21,7 +21,6 @@ namespace AADBOT_KarloHruskovec.Services
 			var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
 			if (user == null) throw new Exception("User not found");
 
-			// Reset if it's a new day
 			if (user.LastUploadReset?.Date != DateTime.UtcNow.Date)
 			{
 				user.DailyUploadSize = 0;

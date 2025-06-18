@@ -22,7 +22,7 @@ function PackagePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ newPackage: selectedPackage })
+      body: JSON.stringify({ newPackage: selectedPackage }),
     });
 
     if (response.ok) {
@@ -51,6 +51,7 @@ function PackagePage() {
         <select
           value={selectedPackage}
           onChange={(e) => setSelectedPackage(e.target.value)}
+          disabled={!status.canChangePackage}
         >
           <option value="FREE">FREE</option>
           <option value="PRO">PRO</option>
@@ -63,6 +64,12 @@ function PackagePage() {
         >
           Change Package
         </button>
+
+        {!status.canChangePackage && (
+          <p className="pending-msg" style={{ marginTop: "1rem", color: "#777" }}>
+            You've already changed your package today. You’ll be able to change it again tomorrow.
+          </p>
+        )}
       </div>
 
       {message && <p className="status-msg">{message}</p>}

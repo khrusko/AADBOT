@@ -13,8 +13,10 @@ const api = {
   auth: {
     register: `${BASE_URL}/api/auth/register`,
     login: `${BASE_URL}/api/auth/login`,
-    loginGoogle: `${BASE_URL}/signin-google`,
-    loginGitHub: `${BASE_URL}/signin-github`,
+    loginGoogle: `${BASE_URL}/api/auth/signin-google`,
+    loginGitHub: `${BASE_URL}/api/auth/signin-github`,
+    me: `${BASE_URL}/api/auth/me`,
+    logout: `${BASE_URL}/api/auth/logout`,
   },
   package: {
     status: `${BASE_URL}/api/package/status`,

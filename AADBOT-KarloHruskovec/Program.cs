@@ -16,12 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
-{
-	options.SignIn.RequireConfirmedAccount = false;
-})
-.AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<ApplicationDbContext>();
+
 
 builder.Services.AddAuthentication()
 	.AddGoogle(options =>
@@ -93,6 +88,28 @@ builder.Services.AddAuthentication()
 			}
 		};
 	});
+
+builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+{
+	options.SignIn.RequireConfirmedAccount = false;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+	options.Events.OnRedirectToLogin = context =>
+	{
+		context.Response.StatusCode = 401;
+		return Task.CompletedTask;
+	};
+
+	options.Cookie.SameSite = SameSiteMode.None;
+	options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
+builder.Services.AddHttpContextAccessor();
+
 
 builder.Services.AddLogging();
 builder.Services.AddScoped<IAuthService, AuthService>();

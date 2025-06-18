@@ -22,12 +22,18 @@ namespace AADBOT_KarloHruskovec.Controllers
 
 		[HttpPost("upload")]
 		[Authorize]
-		public async Task<IActionResult> Upload(IFormFile file, string description, string hashtags, string format = "jpg", int? resize = null)
+		public async Task<IActionResult> Upload(
+			[FromForm] IFormFile file,
+			[FromForm] string description,
+			[FromForm] string hashtags,
+			[FromForm] string format = "jpg",
+			[FromForm] int? resize = null)
 		{
 			var user = await _userManager.GetUserAsync(User);
 			var result = await _photoService.UploadPhotoAsync(user, file, description, hashtags, format, resize);
 			return result ? Ok(new { Message = "Uploaded successfully." }) : BadRequest();
 		}
+
 
 		[HttpGet("latest")]
 		public async Task<IActionResult> GetLatest()
@@ -46,7 +52,7 @@ namespace AADBOT_KarloHruskovec.Controllers
 
 		[HttpPut("{id}")]
 		[Authorize]
-		public async Task<IActionResult> Edit(int id, [FromBody] Photo updated)
+		public async Task<IActionResult> Edit(int id, [FromBody] PhotoUpdate updated)
 		{
 			var user = await _userManager.GetUserAsync(User);
 			var success = await _photoService.UpdatePhotoAsync(user, id, updated.Description, updated.Hashtags);

@@ -1,5 +1,8 @@
 ﻿using AADBOT_KarloHruskovec.Data;
+using AADBOT_KarloHruskovec.Events;
 using AADBOT_KarloHruskovec.Models;
+using AADBOT_KarloHruskovec.Repositories;
+using AADBOT_KarloHruskovec.Repositorires;
 using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -110,13 +113,23 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddHttpContextAccessor();
 
-
+//Services
 builder.Services.AddLogging();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
+builder.Services.AddScoped<LogPhotoUploadHandler>();
+
+//Singleton
+builder.Services.AddSingleton<IEventBus>(_ => LoggingService.Instance);
+
+LoggingService.Instance.Subscribe<PhotoUploadedEvent>(
+	async evt => Console.WriteLine($"Photo uploaded: {evt.FileName}")
+);
+
+
 
 builder.Services.AddControllers();
 
@@ -131,7 +144,29 @@ builder.Services.AddCors(options =>
 	});
 });
 
+//Decorator
+builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<IUserRepository>(provider =>
+{
+	var repo = provider.GetRequiredService<UserRepository>();
+	var logger = provider.GetRequiredService<ILogger<LoggingUserRepository>>();
+	return new LoggingUserRepository(repo, logger);
+});
+
+
+
+//Strategy - Default
+builder.Services.AddScoped<IResizeStrategy>(_ => new ResizeStrategy(500));
+
 var app = builder.Build();
+
+//Observer
+using (var scope = app.Services.CreateScope())
+{
+	var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+	var logHandler = scope.ServiceProvider.GetRequiredService<LogPhotoUploadHandler>();
+	eventBus.Subscribe<PhotoUploadedEvent>(logHandler.Handle);
+}
 
 using (var scope = app.Services.CreateScope())
 {

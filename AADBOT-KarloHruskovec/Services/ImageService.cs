@@ -1,4 +1,5 @@
 ﻿using AADBOT_KarloHruskovec.DTOs;
+using AADBOT_KarloHruskovec.Services;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -60,7 +61,7 @@ public class ImageService : IImageService
 
 					if (filters.Blur)
 					{
-						// Simple blur by averaging nearby pixels (naive for demo purposes)
+						
 						var neighbors = new List<Color>();
 						for (int dx = -1; dx <= 1; dx++)
 							for (int dy = -1; dy <= 1; dy++)

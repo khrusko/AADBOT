@@ -82,6 +82,7 @@ namespace AADBOT_KarloHruskovec.Controllers
 		}
 
 		[HttpGet("me")]
+		[Authorize(AuthenticationSchemes = "JwtBearer")]
 		public IActionResult Me()
 		{
 			if (!User.Identity.IsAuthenticated)

@@ -10,14 +10,20 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-	options.UseSqlServer(connectionString, sqlOptions =>
-		sqlOptions.EnableRetryOnFailure()));
+{
+	if (builder.Environment.IsEnvironment("Testing"))
+		options.UseInMemoryDatabase("testdb");
+	else
+		options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
+});
+
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -207,39 +213,31 @@ app.Use(async (context, next) =>
 
 
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
-	var services = scope.ServiceProvider;
-	var db = services.GetRequiredService<ApplicationDbContext>();
-	await db.Database.MigrateAsync();
-
-	var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-	var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-
-	string[] roles = new[] { "Admin", "RegisteredUser" };
-
-	foreach (var role in roles)
+	using (var scope = app.Services.CreateScope())
 	{
-		if (!await roleManager.RoleExistsAsync(role))
-			await roleManager.CreateAsync(new IdentityRole(role));
-	}
-
-	var adminEmail = "admin@site.com";
-	var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-	if (adminUser == null)
-	{
-		adminUser = new ApplicationUser
+		var services = scope.ServiceProvider;
+		var db = services.GetRequiredService<ApplicationDbContext>();
+		await db.Database.MigrateAsync();
+		var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+		var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+		string[] roles = new[] { "Admin", "RegisteredUser" };
+		foreach (var role in roles)
+			if (!await roleManager.RoleExistsAsync(role))
+				await roleManager.CreateAsync(new IdentityRole(role));
+		var adminEmail = "admin@site.com";
+		var adminUser = await userManager.FindByEmailAsync(adminEmail);
+		if (adminUser == null)
 		{
-			UserName = adminEmail,
-			Email = adminEmail,
-			EmailConfirmed = true,
-			Package = "GOLD"
-		};
-		await userManager.CreateAsync(adminUser, "Admin123!");
-		await userManager.AddToRoleAsync(adminUser, "Admin");
+			adminUser = new ApplicationUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true, Package = "GOLD" };
+			await userManager.CreateAsync(adminUser, "Admin123!");
+			await userManager.AddToRoleAsync(adminUser, "Admin");
+		}
 	}
 }
+
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -263,3 +261,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 await app.RunAsync();
+
+
+public partial class Program { }

@@ -11,6 +11,7 @@ namespace AADBOT_KarloHruskovec.Services
 		Task<bool> UpdatePhotoAsync(ApplicationUser user, int id, string description, string hashtags);
 		Task<List<object>> SearchPhotosAsync(string? hashtag, string? author, long? minSize, long? maxSize, DateTime? from, DateTime? to);
 		Task<byte[]?> GetFilteredPhotoAsync(int id, DownloadFilterOptions filters);
+		Task<List<Photo>> UnsafeSearchByAuthorRaw(string author);
 
 	}
 }

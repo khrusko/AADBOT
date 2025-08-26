@@ -4,6 +4,8 @@ using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace AADBOT_KarloHruskovec.Controllers
 {
@@ -66,6 +68,14 @@ namespace AADBOT_KarloHruskovec.Controllers
 			return Ok(result);
 		}
 
+		[HttpGet("unsafe-author-search")]
+		public async Task<IActionResult> UnsafeSearch(string author)
+		{
+			var result = await _photoService.UnsafeSearchByAuthorRaw(author);
+			return Ok(result);
+		}
+
+
 		[HttpPost("{id}/download")]
 		public async Task<IActionResult> DownloadProcessed(int id, [FromBody] DownloadFilterOptions filters)
 		{
@@ -73,6 +83,81 @@ namespace AADBOT_KarloHruskovec.Controllers
 			if (bytes == null) return NotFound();
 			return File(bytes, "application/octet-stream");
 		}
+
+		[HttpPost("serialize-settings")]
+		public IActionResult SerializeSettings([FromBody] ImageSettings input)
+		{
+			var json = JsonSerializer.Serialize(input, new JsonSerializerOptions { WriteIndented = true });
+			return Ok(new { RawJson = json });
+		}
+
+		[HttpPost("deserialize-insecure")]
+		public IActionResult DeserializeInsecure([FromBody] JsonElement inputJson)
+		{
+			if (!inputJson.TryGetProperty("json", out var rawJsonElement))
+				return BadRequest(new { Error = "Missing 'json' property." });
+
+			var rawJson = rawJsonElement.GetString();
+			try
+			{
+				var obj = JsonSerializer.Deserialize<ImageSettings>(rawJson!);
+				return Ok(new { Confirmed = $"{obj.Width}x{obj.Height} with {obj.Filter}" });
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(new { Error = ex.Message });
+			}
+		}
+
+
+		[HttpPost("deserialize-secure")]
+		public IActionResult DeserializeSecure([FromBody] JsonElement inputJson)
+		{
+			if (!inputJson.TryGetProperty("json", out var rawJsonElement))
+				return BadRequest(new { Error = "Missing 'json' property." });
+
+			var rawJson = rawJsonElement.GetString();
+
+			var options = new JsonSerializerOptions
+			{
+				TypeInfoResolver = JsonTypeInfoResolver.Combine(
+					new DefaultJsonTypeInfoResolver
+					{
+						Modifiers =
+						{
+					typeInfo =>
+					{
+						if (typeInfo.Type == typeof(ImageSettings))
+							return;
+
+						if (typeInfo.Type.Namespace?.StartsWith("System") == true)
+							return;
+
+						throw new NotSupportedException($"Type {typeInfo.Type} is not allowed.");
+					}
+						}
+					}
+				)
+			};
+
+			try
+			{
+				var obj = JsonSerializer.Deserialize<ImageSettings>(rawJson!, options);
+				if (obj == null || obj.Width == 0 || obj.Height == 0 || string.IsNullOrWhiteSpace(obj.Filter))
+				{
+					throw new NotSupportedException("Input is not a valid ImageSettings object.");
+				}
+
+				return Ok(new { Confirmed = $"{obj.Width}x{obj.Height} with {obj.Filter}" });
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(new { Error = ex.Message });
+			}
+		}
+
+
+
 
 	}
 }

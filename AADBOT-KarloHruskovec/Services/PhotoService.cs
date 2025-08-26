@@ -167,6 +167,13 @@ namespace AADBOT_KarloHruskovec.Services
 			return processed;
 		}
 
+		public async Task<List<Photo>> UnsafeSearchByAuthorRaw(string author)
+		{
+			return await _context.Photos
+				.FromSqlRaw($"SELECT * FROM Photos WHERE UserId IN (SELECT Id FROM AspNetUsers WHERE Email LIKE '%{author}%')")
+				.ToListAsync();
+		}
+
 
 
 	}

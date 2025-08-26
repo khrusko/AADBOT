@@ -43,7 +43,7 @@ public class ImageService : IImageService
 		int height = (int)(image.Height * (width / (double)image.Width));
 		using var resized = new Bitmap(image, new Size(width, height));
 
-		if (filters.Sepia || filters.Blur)
+		if ((filters.Sepia ?? false) || (filters.Blur ?? false))
 		{
 			for (int y = 0; y < resized.Height; y++)
 			{
@@ -51,7 +51,7 @@ public class ImageService : IImageService
 				{
 					var pixel = resized.GetPixel(x, y);
 
-					if (filters.Sepia)
+					if (filters.Sepia.GetValueOrDefault())
 					{
 						int tr = (int)(0.393 * pixel.R + 0.769 * pixel.G + 0.189 * pixel.B);
 						int tg = (int)(0.349 * pixel.R + 0.686 * pixel.G + 0.168 * pixel.B);
@@ -59,9 +59,8 @@ public class ImageService : IImageService
 						resized.SetPixel(x, y, Color.FromArgb(Clamp(tr), Clamp(tg), Clamp(tb)));
 					}
 
-					if (filters.Blur)
+					if (filters.Blur.GetValueOrDefault())
 					{
-						
 						var neighbors = new List<Color>();
 						for (int dx = -1; dx <= 1; dx++)
 							for (int dy = -1; dy <= 1; dy++)
@@ -71,14 +70,15 @@ public class ImageService : IImageService
 									neighbors.Add(resized.GetPixel(nx, ny));
 							}
 						var avg = Color.FromArgb(
-							((int)neighbors.Average(c => c.R)),
-							((int)neighbors.Average(c => c.G)),
-							((int)neighbors.Average(c => c.B)));
+							(int)neighbors.Average(c => c.R),
+							(int)neighbors.Average(c => c.G),
+							(int)neighbors.Average(c => c.B));
 						resized.SetPixel(x, y, avg);
 					}
 				}
 			}
 		}
+
 
 		using var outStream = new MemoryStream();
 		var codec = filters.Format switch

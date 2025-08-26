@@ -1,4 +1,6 @@
-﻿namespace AADBOT_KarloHruskovec.Factories
+﻿using AADBOT_KarloHruskovec.Processors;
+
+namespace AADBOT_KarloHruskovec.Factories
 {
 	public class ImageProcessorFactory
 	{

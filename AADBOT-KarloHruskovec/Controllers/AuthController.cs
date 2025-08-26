@@ -2,6 +2,8 @@
 using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using AADBOT_KarloHruskovec.Models;
 
 namespace AADBOT_KarloHruskovec.Controllers
 {
@@ -10,11 +12,31 @@ namespace AADBOT_KarloHruskovec.Controllers
 	public class AuthController : ControllerBase
 	{
 		private readonly IAuthService _authService;
+		private readonly UserManager<ApplicationUser> _userManager;
+		private readonly IJwtService _jwtService;
 
-		public AuthController(IAuthService authService)
+		public AuthController(IAuthService authService, UserManager<ApplicationUser> userManager, IJwtService jwtService)
 		{
 			_authService = authService;
+			_userManager = userManager;
+			_jwtService = jwtService;
+
 		}
+
+		[HttpPost("refresh-token")]
+		public IActionResult RefreshToken([FromBody] RefreshTokenRequest model)
+		{
+			if (!_jwtService.ValidateRefreshToken(model.Email, model.RefreshToken))
+				return Unauthorized(new { Message = "Invalid refresh token." });
+
+			var user = _userManager.FindByEmailAsync(model.Email).Result;
+			var isAdmin = model.Email.Contains("admin", StringComparison.OrdinalIgnoreCase);
+			var newAccessToken = _jwtService.GenerateAccessToken(model.Email, isAdmin);
+
+
+			return Ok(new { AccessToken = newAccessToken });
+		}
+
 
 		[HttpPost("register")]
 		public async Task<IActionResult> Register([FromBody] RegisterRequest model)
@@ -36,12 +58,18 @@ namespace AADBOT_KarloHruskovec.Controllers
 			if (!success)
 				return Unauthorized(new { Message = errors.FirstOrDefault() ?? "Login failed." });
 
+			var user = _userManager.FindByEmailAsync(model.Email).Result;
+			var isUserAdmin = model.Email.Contains("admin", StringComparison.OrdinalIgnoreCase);
+			var accessToken = _jwtService.GenerateAccessToken(model.Email, isUserAdmin);
+			var refreshToken = _jwtService.GenerateRefreshToken(model.Email);
+
 			return Ok(new
 			{
 				Message = "Login successful.",
-				Email = model.Email,
-				IsAdmin = isAdmin
+				AccessToken = accessToken,
+				RefreshToken = refreshToken
 			});
+
 		}
 
 
@@ -64,6 +92,33 @@ namespace AADBOT_KarloHruskovec.Controllers
 				Email = User.Identity.Name,
 				IsAdmin = User.IsInRole("Admin")
 			});
+		}
+
+		[HttpGet("public")]
+		[AllowAnonymous]
+		public IActionResult PublicEndpoint()
+		{
+			return Ok("Accessible by everyone.");
+		}
+
+		[HttpGet("user-only")]
+		[Authorize(Roles = "USER,ADMIN")]
+		public IActionResult UserEndpoint()
+		{
+			return Ok("Accessible by USER and ADMIN.");
+		}
+
+		[HttpGet("admin-only")]
+		[Authorize(Roles = "ADMIN")]
+		public IActionResult AdminEndpoint()
+		{
+			return Ok("Accessible only by ADMIN.");
+		}
+
+		[HttpGet("test")]
+		public IActionResult Test()
+		{
+			return Ok("Test OK");
 		}
 
 

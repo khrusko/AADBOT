@@ -6,7 +6,9 @@ using AADBOT_KarloHruskovec.Repositorires;
 using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +23,25 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 
 
-builder.Services.AddAuthentication()
+builder.Services.AddAuthentication(options =>
+{
+	options.DefaultAuthenticateScheme = "JwtBearer";
+	options.DefaultChallengeScheme = "JwtBearer";
+})
+	.AddJwtBearer("JwtBearer", options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = true,
+			ValidateAudience = true,
+			ValidateLifetime = true,
+			ValidateIssuerSigningKey = true,
+			ValidIssuer = builder.Configuration["Jwt:Issuer"],
+			ValidAudience = builder.Configuration["Jwt:Audience"],
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+			RoleClaimType = ClaimTypes.Role
+		};
+	})
 	.AddGoogle(options =>
 	{
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
@@ -92,6 +112,7 @@ builder.Services.AddAuthentication()
 		};
 	});
 
+
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
 	options.SignIn.RequireConfirmedAccount = false;
@@ -124,6 +145,9 @@ builder.Services.AddScoped<LogPhotoUploadHandler>();
 
 //Singleton
 builder.Services.AddSingleton<IEventBus>(_ => LoggingService.Instance);
+builder.Services.AddSingleton<IJwtService, JwtTokenService>();
+
+
 
 LoggingService.Instance.Subscribe<PhotoUploadedEvent>(
 	async evt => Console.WriteLine($"Photo uploaded: {evt.FileName}")
@@ -167,6 +191,21 @@ using (var scope = app.Services.CreateScope())
 	var logHandler = scope.ServiceProvider.GetRequiredService<LogPhotoUploadHandler>();
 	eventBus.Subscribe<PhotoUploadedEvent>(logHandler.Handle);
 }
+
+app.Use(async (context, next) =>
+{
+	context.Response.OnStarting(() =>
+	{
+		context.Response.Headers.Remove("X-Powered-By");
+		return Task.CompletedTask;
+	});
+	await next.Invoke();
+});
+
+//if (!app.Environment.IsDevelopment()) //Temporary fix, for development only
+	app.UseHsts();
+
+
 
 using (var scope = app.Services.CreateScope())
 {
@@ -217,9 +256,10 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseCors("AllowReactDev");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

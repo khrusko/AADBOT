@@ -5,17 +5,17 @@ using Xunit;
 
 namespace AADBOT.Tests
 {
-	public class AuthIntegrationTests : IClassFixture<TestAppFactory>
+	public class UiHttpFlowTests : IClassFixture<TestAppFactory>
 	{
 		private readonly HttpClient _http;
 
-		public AuthIntegrationTests(TestAppFactory f)
+		public UiHttpFlowTests(TestAppFactory f)
 		{
 			_http = f.CreateClient(); // TestServer client
 		}
 
 		[Fact]
-		public async Task Me_WithoutToken_Returns401()
+		public async Task Me_Page_Unauthenticated_Shows401()
 		{
 			var resp = await _http.GetAsync("/api/auth/me");
 			if (resp.StatusCode == HttpStatusCode.NotFound)
@@ -25,9 +25,9 @@ namespace AADBOT.Tests
 		}
 
 		[Fact]
-		public async Task Login_WithInvalidCredentials_Returns401()
+		public async Task Login_InvalidCredentials_Shows401()
 		{
-			var body = new { email = "nope@example.com", password = "WrongPass!123" };
+			var body = new { email = "invalid@example.com", password = "WrongPass!123" };
 
 			var resp = await _http.PostAsJsonAsync("/api/auth/login", body);
 			if (resp.StatusCode == HttpStatusCode.NotFound)

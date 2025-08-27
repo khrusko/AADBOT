@@ -11,7 +11,7 @@ namespace AADBOT.Tests
 		bool Has<TAttr>(Type t, string prop) where TAttr : Attribute
 		{
 			var pi = t.GetProperty(prop);
-			Assert.NotNull(pi); // fail clearly if the property is missing
+			Assert.NotNull(pi);
 			return pi!.GetCustomAttributes(typeof(TAttr), true).Any();
 		}
 

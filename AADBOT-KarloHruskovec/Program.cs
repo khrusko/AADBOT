@@ -235,6 +235,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 			await userManager.AddToRoleAsync(adminUser, "Admin");
 		}
 	}
+	app.UseHsts();
+	app.UseHttpsRedirection();
 }
 
 
@@ -249,7 +251,6 @@ else
 	app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();

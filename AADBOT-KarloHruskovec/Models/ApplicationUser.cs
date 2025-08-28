@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using Microsoft.AspNetCore.Identity;
 
 namespace AADBOT_KarloHruskovec.Models
 {
-	public class ApplicationUser : IdentityUser
+	public partial class ApplicationUser : IdentityUser
 	{
 		public string Package { get; set; } = "FREE";
 		public DateTime? LastPackageChange { get; set; }
 		public long DailyUploadSize { get; set; } = 0;
 		public DateTime? LastUploadReset { get; set; }
 	}
-
 }

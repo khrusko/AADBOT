@@ -1,4 +1,6 @@
-﻿using AADBOT_KarloHruskovec.Models;
+﻿using AADBOT_KarloHruskovec.Application.Common;
+using AADBOT_KarloHruskovec.Models;
+using Microsoft.Extensions.Logging;
 
 namespace AADBOT_KarloHruskovec.Repositories
 {
@@ -13,29 +15,28 @@ namespace AADBOT_KarloHruskovec.Repositories
 			_logger = logger;
 		}
 
-		public async Task<ApplicationUser?> GetByIdAsync(string id)
+		public async Task<Option<ApplicationUser>> GetByIdAsync(string id)
 		{
-			_logger.LogInformation("Fetching user by ID: {Id}", id);
+			_logger.LogInformation("GetByIdAsync called with {Id}", id);
 			return await _inner.GetByIdAsync(id);
 		}
 
-		public async Task<ApplicationUser?> GetByEmailAsync(string email)
+		public async Task<Option<ApplicationUser>> GetByEmailAsync(string email)
 		{
-			_logger.LogInformation("Fetching user by Email: {Email}", email);
+			_logger.LogInformation("GetByEmailAsync called with {Email}", email);
 			return await _inner.GetByEmailAsync(email);
 		}
 
-		public async Task<List<ApplicationUser>> GetAllAsync()
+		public async Task<IReadOnlyList<ApplicationUser>> GetAllAsync()
 		{
-			_logger.LogInformation("Fetching all users");
+			_logger.LogInformation("GetAllAsync called");
 			return await _inner.GetAllAsync();
 		}
 
-		public async Task SaveAsync(ApplicationUser user)
+		public async Task<Result<ApplicationUser>> SaveAsync(ApplicationUser user)
 		{
-			_logger.LogInformation("Saving user: {Email}", user.Email);
-			await _inner.SaveAsync(user);
+			_logger.LogInformation("SaveAsync called for {Email}", user.Email);
+			return await _inner.SaveAsync(user);
 		}
 	}
-
 }

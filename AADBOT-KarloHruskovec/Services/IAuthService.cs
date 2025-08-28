@@ -1,11 +1,10 @@
-﻿using AADBOT_KarloHruskovec.DTOs;
+﻿using AADBOT_KarloHruskovec.Application.Auth;
 
-namespace AADBOT_KarloHruskovec.Services
+namespace AADBOT_KarloHruskovec.Services;
+
+public interface IAuthService
 {
-	public interface IAuthService
-	{
-		Task<(bool Success, string[] Errors)> RegisterAsync(RegisterRequest model);
-		Task<(bool Success, string[] Errors, bool IsAdmin)> LoginAsync(LoginRequest model);
-		Task LogoutAsync();
-	}
+	Task<(bool success, IEnumerable<string> errors)> RegisterAsync(RegisterUserCommand command);
+	Task<(bool success, IEnumerable<string> errors, bool isAdmin)> LoginAsync(LoginCommand command);
+	Task LogoutAsync();
 }

@@ -1,13 +1,13 @@
-﻿using AADBOT_KarloHruskovec.Models;
+﻿using AADBOT_KarloHruskovec.Application.Common;
+using AADBOT_KarloHruskovec.Models;
 
 namespace AADBOT_KarloHruskovec.Repositories
 {
 	public interface IUserRepository
 	{
-		Task<ApplicationUser?> GetByIdAsync(string id);
-		Task<ApplicationUser?> GetByEmailAsync(string email);
-		Task<List<ApplicationUser>> GetAllAsync();
-		Task SaveAsync(ApplicationUser user);
+		Task<Option<ApplicationUser>> GetByIdAsync(string id);
+		Task<Option<ApplicationUser>> GetByEmailAsync(string email);
+		Task<IReadOnlyList<ApplicationUser>> GetAllAsync();
+		Task<Result<ApplicationUser>> SaveAsync(ApplicationUser user);
 	}
-
 }

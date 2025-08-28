@@ -2,7 +2,6 @@
 using AADBOT_KarloHruskovec.Events;
 using AADBOT_KarloHruskovec.Models;
 using AADBOT_KarloHruskovec.Repositories;
-using AADBOT_KarloHruskovec.Repositorires;
 using AADBOT_KarloHruskovec.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

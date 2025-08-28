@@ -21,6 +21,7 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
+		<PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
 		<PackageReference Include="System.Drawing.Common" Version="9.0.6" />
 		<None Include="web.config" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>

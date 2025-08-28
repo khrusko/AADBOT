@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using Prometheus;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -188,6 +190,11 @@ builder.Services.AddScoped<IUserRepository>(provider =>
 builder.Services.AddScoped<IResizeStrategy>(_ => new ResizeStrategy(500));
 
 var app = builder.Build();
+
+app.UseHttpMetrics();
+// map the /metrics endpoint
+app.MapMetrics();
+
 
 //Observer
 using (var scope = app.Services.CreateScope())

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using AADBOT_KarloHruskovec.Application.Security;
 using System;
+using AADBOT_KarloHruskovec.Metrics;
 
 namespace AADBOT_KarloHruskovec.Services
 {
@@ -64,20 +65,29 @@ namespace AADBOT_KarloHruskovec.Services
 		{
 			var maybeUser = await _userRepository.GetByEmailAsync(command.Email);
 			if (!maybeUser.HasValue)
+			{
+				AuthMetrics.FailedLogins.Inc();
 				return (false, new[] { "Invalid credentials." }, false);
+			}
 
 			var user = maybeUser.Value;
 
 			var result = await _signInManager.PasswordSignInAsync(user, command.Password, false, false);
 			if (!result.Succeeded)
+			{
+				AuthMetrics.FailedLogins.Inc();
 				return (false, new[] { "Invalid credentials." }, false);
+			}
 
 			// functional daily reset
 			if (user.LastUploadReset == null || user.LastUploadReset.Value.Date < DateTime.UtcNow.Date)
 			{
 				var resetUser = user.WithDailyUploadSize(0);
 				await _userRepository.SaveAsync(resetUser);
+				AuthMetrics.DailyUploadResets.Inc();
 			}
+
+			AuthMetrics.SuccessfulLogins.Inc();
 
 			_context.Logs.Add(new LogEntry
 			{
@@ -93,6 +103,7 @@ namespace AADBOT_KarloHruskovec.Services
 
 			return (true, Array.Empty<string>(), isAdmin);
 		}
+
 
 		public async Task LogoutAsync()
 		{

@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using Prometheus;
+using AADBOT_KarloHruskovec.Aspects;
 
 
 
@@ -162,7 +163,12 @@ LoggingService.Instance.Subscribe<PhotoUploadedEvent>(
 
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+	options.Filters.Add<LoggingActionFilter>();
+	options.Filters.Add<ValidationActionFilter>();
+});
+
 
 builder.Services.AddCors(options =>
 {

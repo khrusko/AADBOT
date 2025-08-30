@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using AADBOT_KarloHruskovec.Models;
 using AADBOT_KarloHruskovec.Application.Auth;
 using static AADBOT_KarloHruskovec.Application.Common.Validation;
+using AADBOT_KarloHruskovec.Application.Validation;
+using AADBOT.Auth.Services;
 
 namespace AADBOT_KarloHruskovec.Controllers
 {
@@ -16,12 +18,18 @@ namespace AADBOT_KarloHruskovec.Controllers
 		private readonly IAuthService _authService;
 		private readonly UserManager<ApplicationUser> _userManager;
 		private readonly IJwtService _jwtService;
+		private readonly IPackageValidator _packageValidator;
 
-		public AuthController(IAuthService authService, UserManager<ApplicationUser> userManager, IJwtService jwtService)
+		public AuthController(
+			IAuthService authService,
+			UserManager<ApplicationUser> userManager,
+			IJwtService jwtService,
+			IPackageValidator packageValidator)
 		{
 			_authService = authService;
 			_userManager = userManager;
 			_jwtService = jwtService;
+			_packageValidator = packageValidator;
 		}
 
 		[HttpPost("refresh-token")]
@@ -42,20 +50,11 @@ namespace AADBOT_KarloHruskovec.Controllers
 		{
 			var cmd = model.ToCommand();
 
-			var errors = Validate(cmd,
-				NotEmpty(c => c.Email, "Email is required."),
-				EmailFormat(c => c.Email, "Email format invalid."),
-				NotEmpty(c => c.Password, "Password is required.")
-			);
-
-			if (errors.Any())
-				return BadRequest(errors);
-
-			if (!new[] { "FREE", "PRO", "GOLD" }.Contains(cmd.Package))
+			if (!_packageValidator.IsValid(cmd.Package))
 				return BadRequest("Invalid package.");
 
-			var (success, serviceErrors) = await _authService.RegisterAsync(cmd);
-			if (!success) return BadRequest(serviceErrors);
+			var (success, errors) = await _authService.RegisterAsync(cmd);
+			if (!success) return BadRequest(errors);
 
 			return Ok(new { Message = "Registration successful." });
 		}
@@ -75,6 +74,23 @@ namespace AADBOT_KarloHruskovec.Controllers
 
 			return Ok(new { Message = "Login successful.", AccessToken = accessToken, RefreshToken = refreshToken });
 		}
+
+		[HttpPost("login/password")]
+		public async Task<ActionResult<AuthResult>> Password([FromBody] PasswordLoginRequest request, CancellationToken ct,
+	[FromServices] IPasswordAuthenticator auth)
+		{
+			var result = await auth.AuthenticateAsync(request, ct);
+			return result.Success ? Ok(result) : Unauthorized(result);
+		}
+
+		[HttpPost("login/apikey")]
+		public async Task<ActionResult<AuthResult>> ApiKey([FromBody] ApiKeyLoginRequest request, CancellationToken ct,
+			[FromServices] IApiKeyAuthenticator auth)
+		{
+			var result = await auth.AuthenticateAsync(request, ct);
+			return result.Success ? Ok(result) : Unauthorized(result);
+		}
+
 
 		[Authorize]
 		[HttpPost("logout")]

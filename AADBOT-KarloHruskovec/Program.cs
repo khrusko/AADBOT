@@ -10,7 +10,12 @@ using System.Security.Claims;
 using System.Text;
 using Prometheus;
 using AADBOT_KarloHruskovec.Aspects;
-
+using AADBOT_KarloHruskovec.Application.Validation;
+using AADBOT_KarloHruskovec.Application.Billing;
+using AADBOT.Auth.Services;
+using AADBOT.Infrastructure;
+using AADBOT.Infrastructure.Auth;
+using AADBOT_KarloHruskovec.Options;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -151,9 +156,28 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<LogPhotoUploadHandler>();
 
+
+
 //Singleton
 builder.Services.AddSingleton<IEventBus>(_ => LoggingService.Instance);
 builder.Services.AddSingleton<IJwtService, JwtTokenService>();
+builder.Services.AddSingleton<IPackageValidator, PackageValidator>();
+builder.Services.AddSingleton<IPackagePolicy, FreePolicy>();
+builder.Services.AddSingleton<IPackagePolicy, ProPolicy>();
+builder.Services.AddSingleton<IPackagePolicy, GoldPolicy>();
+builder.Services.AddSingleton<IPackagePolicyResolver, PackagePolicyResolver>();
+
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Auth:Jwt"));
+builder.Services.Configure<AuthSeeds>(builder.Configuration.GetSection("Auth:Seeds"));
+
+builder.Services.AddSingleton<IJwtIssuer, JwtIssuer>();
+builder.Services.AddSingleton<IPasswordVerifier, PasswordVerifier>();
+builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+
+builder.Services.AddScoped<IPasswordAuthenticator, PasswordAuthenticator>();
+builder.Services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
+builder.Services.AddScoped<AuthenticatorPipeline>();
 
 
 

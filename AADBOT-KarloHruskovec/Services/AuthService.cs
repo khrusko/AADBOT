@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using AADBOT_KarloHruskovec.Application.Security;
 using System;
 using AADBOT_KarloHruskovec.Metrics;
+using AADBOT_KarloHruskovec.Application.Billing;
 
 namespace AADBOT_KarloHruskovec.Services
 {
@@ -22,24 +23,26 @@ namespace AADBOT_KarloHruskovec.Services
 		private readonly ApplicationDbContext _context;
 		private readonly IHttpContextAccessor _httpContextAccessor;
 		private readonly IUserRepository _userRepository;
+		private readonly IPackagePolicyResolver _packagePolicyResolver;
 
 		public AuthService(
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager,
 			ApplicationDbContext context,
 			IHttpContextAccessor httpContextAccessor,
-			IUserRepository userRepository)
+			IUserRepository userRepository,
+			IPackagePolicyResolver packagePolicyResolver)
 		{
 			_userManager = userManager;
 			_signInManager = signInManager;
 			_context = context;
 			_httpContextAccessor = httpContextAccessor;
 			_userRepository = userRepository;
+			_packagePolicyResolver = packagePolicyResolver;
 		}
 
 		public async Task<(bool success, IEnumerable<string> errors)> RegisterAsync(RegisterUserCommand command)
 		{
-			// functional normalization + package stamping
 			var user = UserFactory.Create(command.Email, command.Package)
 								  .WithEmail(command.Email.Trim().ToLowerInvariant())
 								  .WithPackage(command.Package);
@@ -66,43 +69,49 @@ namespace AADBOT_KarloHruskovec.Services
 			var maybeUser = await _userRepository.GetByEmailAsync(command.Email);
 			if (!maybeUser.HasValue)
 			{
-				AuthMetrics.FailedLogins.Inc();
+				AADBOT_KarloHruskovec.Metrics.AuthMetrics.FailedLogins.Inc();
 				return (false, new[] { "Invalid credentials." }, false);
 			}
 
 			var user = maybeUser.Value;
 
-			var result = await _signInManager.PasswordSignInAsync(user, command.Password, false, false);
-			if (!result.Succeeded)
+			var signIn = await _signInManager.PasswordSignInAsync(user, command.Password, isPersistent: false, lockoutOnFailure: false);
+			if (!signIn.Succeeded)
 			{
-				AuthMetrics.FailedLogins.Inc();
+				AADBOT_KarloHruskovec.Metrics.AuthMetrics.FailedLogins.Inc();
 				return (false, new[] { "Invalid credentials." }, false);
 			}
 
-			// functional daily reset
-			if (user.LastUploadReset == null || user.LastUploadReset.Value.Date < DateTime.UtcNow.Date)
+			var currentUser = user;
+			if (currentUser.LastUploadReset == null || currentUser.LastUploadReset.Value.Date < DateTime.UtcNow.Date)
 			{
-				var resetUser = user.WithDailyUploadSize(0);
-				await _userRepository.SaveAsync(resetUser);
-				AuthMetrics.DailyUploadResets.Inc();
+				currentUser = currentUser.WithDailyUploadSize(0);
+				await _userRepository.SaveAsync(currentUser);
+				AADBOT_KarloHruskovec.Metrics.AuthMetrics.DailyUploadResets.Inc();
 			}
 
-			AuthMetrics.SuccessfulLogins.Inc();
+			var policy = _packagePolicyResolver.Resolve(currentUser.Package);
+			if (currentUser.DailyUploadSize > policy.DailyUploadQuotaBytes)
+			{
+				currentUser = currentUser.WithDailyUploadSize(policy.DailyUploadQuotaBytes);
+				await _userRepository.SaveAsync(currentUser);
+			}
+			AADBOT_KarloHruskovec.Metrics.AuthMetrics.SuccessfulLogins.Inc();
 
 			_context.Logs.Add(new LogEntry
 			{
-				UserId = user.Id,
+				UserId = currentUser.Id,
 				Action = "User logged in",
 				Timestamp = DateTime.UtcNow
 			});
-
 			await _context.SaveChangesAsync();
 
-			var roles = await _userManager.GetRolesAsync(user);
+			var roles = await _userManager.GetRolesAsync(currentUser);
 			var isAdmin = roles.Contains("Admin");
 
 			return (true, Array.Empty<string>(), isAdmin);
 		}
+
 
 
 		public async Task LogoutAsync()

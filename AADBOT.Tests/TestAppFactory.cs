@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AADBOT.Tests
 {
-	// Uses TestServer (default). It also swaps SQL Server for EF InMemory in "Testing".
 	public class TestAppFactory : WebApplicationFactory<Program>
 	{
 		protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -16,13 +15,12 @@ namespace AADBOT.Tests
 
 			builder.ConfigureServices(services =>
 			{
-				// Remove the existing SQL Server registration
 				var toRemove = services
 					.Where(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>))
 					.ToList();
 				foreach (var d in toRemove) services.Remove(d);
 
-				// Add InMemory DB for tests
+				//InMemory
 				services.AddDbContext<ApplicationDbContext>(opts =>
 					opts.UseInMemoryDatabase("testdb"));
 			});

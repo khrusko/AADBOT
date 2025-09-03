@@ -11,7 +11,7 @@ namespace AADBOT.Tests
 
 		public UiHttpFlowTests(TestAppFactory f)
 		{
-			_http = f.CreateClient(); // TestServer client
+			_http = f.CreateClient();
 		}
 
 		[Fact]

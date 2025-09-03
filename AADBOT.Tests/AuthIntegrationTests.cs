@@ -11,7 +11,7 @@ namespace AADBOT.Tests
 
 		public AuthIntegrationTests(TestAppFactory f)
 		{
-			_http = f.CreateClient(); // TestServer client
+			_http = f.CreateClient();
 		}
 
 		[Fact]
